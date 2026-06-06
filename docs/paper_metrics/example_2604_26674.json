@@ -1,0 +1,16 @@
+{
+  "source": "arXiv:2604.26674",
+  "note": "The paper is a Defects4J APR workability audit, not a quantum minimization algorithm. These placeholder-compatible rows document the schema for reproduced/external metrics when available.",
+  "metrics": [
+    {
+      "project": "Lang",
+      "bug_id": 1,
+      "version": "b",
+      "algorithm": "external_baseline_example",
+      "coverage_ratio": 1.0,
+      "selected_count": 4,
+      "reduction_ratio": 0.0,
+      "notes": "Example schema row; replace with reproduced/published baseline numbers before paper claims."
+    }
+  ]
+}

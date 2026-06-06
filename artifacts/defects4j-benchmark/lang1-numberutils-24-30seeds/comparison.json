@@ -1,0 +1,41 @@
+{
+  "primary": "qiea",
+  "comparisons": {
+    "ga": {
+      "primary_full_coverage_rate": 1.0,
+      "baseline_full_coverage_rate": 1.0,
+      "selected_count_delta": 0.0,
+      "selected_count_relative_improvement": 0.0,
+      "runtime_delta_seconds": 0.07602717182599009,
+      "runtime_relative_improvement": -0.32221606492968224,
+      "claim_safe": false
+    },
+    "greedy": {
+      "primary_full_coverage_rate": 1.0,
+      "baseline_full_coverage_rate": 1.0,
+      "selected_count_delta": 0.0,
+      "selected_count_relative_improvement": 0.0,
+      "runtime_delta_seconds": 0.3116155468839376,
+      "runtime_relative_improvement": -859.5603017896608,
+      "claim_safe": false
+    },
+    "random": {
+      "primary_full_coverage_rate": 1.0,
+      "baseline_full_coverage_rate": 0.0,
+      "selected_count_delta": 1.1333333333333329,
+      "selected_count_relative_improvement": -0.0714285714285714,
+      "runtime_delta_seconds": 0.12394763519405388,
+      "runtime_relative_improvement": -0.6591891968738666,
+      "claim_safe": false
+    },
+    "sa": {
+      "primary_full_coverage_rate": 1.0,
+      "baseline_full_coverage_rate": 1.0,
+      "selected_count_delta": 0.0,
+      "selected_count_relative_improvement": 0.0,
+      "runtime_delta_seconds": 0.2464812085304099,
+      "runtime_relative_improvement": -3.763251869057795,
+      "claim_safe": false
+    }
+  }
+}

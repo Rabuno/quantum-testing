@@ -53,6 +53,19 @@ quantum-testing minimize \
   --algorithm qiea
 ```
 
+Run a multi-case Defects4J benchmark once matrices are harvested:
+
+```bash
+quantum-testing defects4j-benchmark \
+  --matrix-root datasets/defects4j \
+  --projects Lang,Chart,Cli \
+  --bugs 1-10 \
+  --algorithms greedy,qiea,ga,random,sa \
+  --seeds 1-30
+```
+
+QIEA uses simulated qubits represented by amplitudes `(α, β)`, measurement/collapse, and rotation-gate updates; this is not a plain bit-string optimizer.
+
 See `docs/defects4j-benchmark.md`. Defects4J harvesting requires Java 11 and an initialized Defects4J checkout; the Python CI only tests adapter parsing and matrix generation.
 
 The installed console script is also available as `quantum-testing`.

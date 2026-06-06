@@ -21,3 +21,5 @@ dist/
 
 # Local outputs
 *.log
+/datasets/**/raw/
+/outputs/

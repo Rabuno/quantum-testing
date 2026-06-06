@@ -35,6 +35,8 @@ class Defects4JConfig:
     reuse_workdir: bool = True
     force_coverage: bool = False
     requirement_scope: str = "covered-lines"
+    expand_class_tests: bool = True
+    test_filter: str | None = None
 
 
 @dataclass
@@ -143,6 +145,48 @@ def _export_property(d4j: Path, workdir: Path, prop: str, env: dict[str, str]) -
     return [line.strip() for line in result.stdout.splitlines() if line.strip()]
 
 
+def _java_source_for_class(workdir: Path, test_src_dir: str | None, class_name: str) -> Path | None:
+    if not test_src_dir:
+        return None
+    candidate = workdir / test_src_dir / Path(*class_name.split(".")).with_suffix(".java")
+    return candidate if candidate.exists() else None
+
+
+def _extract_test_methods(java_file: Path) -> list[str]:
+    """Extract likely JUnit test methods from a Java test source file."""
+    text = java_file.read_text(errors="ignore")
+    methods: list[str] = []
+    # JUnit 4/5 style: @Test ... public void methodName(...)
+    for match in re.finditer(r"@Test(?:\s*\([^)]*\))?\s+(?:public\s+)?(?:void|[A-Za-z0-9_<>, ?]+)\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(", text, re.MULTILINE):
+        methods.append(match.group(1))
+    # JUnit 3 style: public void testSomething(...)
+    for match in re.finditer(r"public\s+void\s+(test[A-Za-z0-9_]*)\s*\(", text):
+        if match.group(1) not in methods:
+            methods.append(match.group(1))
+    return methods
+
+
+def _expand_class_level_tests(tests: list[str], workdir: Path, test_src_dir: str | None) -> tuple[list[str], dict[str, list[str]]]:
+    """Expand class-level Defects4J exports into method-level coverage targets."""
+    expanded: list[str] = []
+    mapping: dict[str, list[str]] = {}
+    for test_id in tests:
+        if "::" in test_id:
+            expanded.append(test_id)
+            mapping[test_id] = [test_id]
+            continue
+        java_file = _java_source_for_class(workdir, test_src_dir, test_id)
+        methods = _extract_test_methods(java_file) if java_file else []
+        method_ids = [f"{test_id}::{m}" for m in methods]
+        if method_ids:
+            expanded.extend(method_ids)
+            mapping[test_id] = method_ids
+        else:
+            expanded.append(test_id)
+            mapping[test_id] = [test_id]
+    return expanded, mapping
+
+
 def collect_defects4j_matrix(config: Defects4JConfig) -> Defects4JResult:
     """Harvest a labeled test × covered-line matrix for one Defects4J bug version.
 
@@ -167,14 +211,22 @@ def collect_defects4j_matrix(config: Defects4JConfig) -> Defects4JResult:
     _run([str(d4j), "compile", "-w", str(workdir)], env=env, timeout=1800)
 
     exported = {}
-    for prop in ["tests.all", "tests.relevant", "tests.trigger", "classes.modified"]:
+    for prop in ["tests.all", "tests.relevant", "tests.trigger", "classes.modified", "dir.src.tests"]:
         try:
             exported[prop] = _export_property(d4j, workdir, prop, env)
         except subprocess.CalledProcessError as exc:
             exported[prop] = []
             exported[f"{prop}.error"] = exc.stderr
 
-    tests = list(exported.get(config.test_property, []))
+    original_tests = list(exported.get(config.test_property, []))
+    class_expansion: dict[str, list[str]] = {}
+    if config.expand_class_tests:
+        tests, class_expansion = _expand_class_level_tests(original_tests, workdir, (exported.get("dir.src.tests") or [None])[0])
+    else:
+        tests = original_tests
+    if config.test_filter:
+        pattern = re.compile(config.test_filter)
+        tests = [test for test in tests if pattern.search(test)]
     if config.limit_tests is not None:
         tests = tests[: config.limit_tests]
 
@@ -211,6 +263,10 @@ def collect_defects4j_matrix(config: Defects4JConfig) -> Defects4JResult:
         "output_dir": str(outdir),
         "total_tests": len(coverages),
         "total_requirements": len(requirements),
+        "original_tests_count": len(original_tests),
+        "expanded_tests_count": len(tests),
+        "test_filter": config.test_filter,
+        "class_expansion": class_expansion,
         "failures": failures,
         "exports": exported,
         "environment": metadata,

@@ -1,0 +1,347 @@
+{
+  "total_records": 121,
+  "algorithms": {
+    "ga": {
+      "runs": 30,
+      "cases": 1,
+      "coverage": {
+        "mean": 1.0,
+        "std": 0.0,
+        "median": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "selected_count": {
+        "mean": 7.0,
+        "std": 0.0,
+        "median": 7.0,
+        "min": 7.0,
+        "max": 7.0
+      },
+      "reduction_ratio": {
+        "mean": 0.41666666666666663,
+        "std": 0.0,
+        "median": 0.41666666666666663,
+        "min": 0.41666666666666663,
+        "max": 0.41666666666666663
+      },
+      "runtime_seconds": {
+        "mean": 0.0954984251370964,
+        "std": 0.00711896400087816,
+        "median": 0.09449807697092183,
+        "min": 0.0851194309652783,
+        "max": 0.11946022603660822
+      },
+      "full_coverage_rate": 1.0,
+      "best_selected_full_coverage": 7
+    },
+    "greedy": {
+      "runs": 1,
+      "cases": 1,
+      "coverage": {
+        "mean": 1.0,
+        "std": 0.0,
+        "median": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "selected_count": {
+        "mean": 7.0,
+        "std": 0.0,
+        "median": 7.0,
+        "min": 7.0,
+        "max": 7.0
+      },
+      "reduction_ratio": {
+        "mean": 0.41666666666666663,
+        "std": 0.0,
+        "median": 0.41666666666666663,
+        "min": 0.41666666666666663,
+        "max": 0.41666666666666663
+      },
+      "runtime_seconds": {
+        "mean": 0.00024893699446693063,
+        "std": 0.0,
+        "median": 0.00024893699446693063,
+        "min": 0.00024893699446693063,
+        "max": 0.00024893699446693063
+      },
+      "full_coverage_rate": 1.0,
+      "best_selected_full_coverage": 7
+    },
+    "qiea": {
+      "runs": 30,
+      "cases": 1,
+      "coverage": {
+        "mean": 1.0,
+        "std": 0.0,
+        "median": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "selected_count": {
+        "mean": 7.0,
+        "std": 0.0,
+        "median": 7.0,
+        "min": 7.0,
+        "max": 7.0
+      },
+      "reduction_ratio": {
+        "mean": 0.41666666666666663,
+        "std": 0.0,
+        "median": 0.41666666666666663,
+        "min": 0.41666666666666663,
+        "max": 0.41666666666666663
+      },
+      "runtime_seconds": {
+        "mean": 0.0946301720958824,
+        "std": 0.010474174314807726,
+        "median": 0.09306299249874428,
+        "min": 0.0794832200044766,
+        "max": 0.12525412399554625
+      },
+      "full_coverage_rate": 1.0,
+      "best_selected_full_coverage": 7
+    },
+    "random": {
+      "runs": 30,
+      "cases": 1,
+      "coverage": {
+        "mean": 1.0,
+        "std": 0.0,
+        "median": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "selected_count": {
+        "mean": 7.366666666666666,
+        "std": 0.4818944098266987,
+        "median": 7.0,
+        "min": 7.0,
+        "max": 8.0
+      },
+      "reduction_ratio": {
+        "mean": 0.3861111111111111,
+        "std": 0.04015786748555819,
+        "median": 0.41666666666666663,
+        "min": 0.33333333333333337,
+        "max": 0.41666666666666663
+      },
+      "runtime_seconds": {
+        "mean": 0.041624443772404145,
+        "std": 0.004993984505775356,
+        "median": 0.04203345751739107,
+        "min": 0.03273159998934716,
+        "max": 0.05407541897147894
+      },
+      "full_coverage_rate": 1.0,
+      "best_selected_full_coverage": 7
+    },
+    "sa": {
+      "runs": 30,
+      "cases": 1,
+      "coverage": {
+        "mean": 1.0,
+        "std": 0.0,
+        "median": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "selected_count": {
+        "mean": 7.0,
+        "std": 0.0,
+        "median": 7.0,
+        "min": 7.0,
+        "max": 7.0
+      },
+      "reduction_ratio": {
+        "mean": 0.41666666666666663,
+        "std": 0.0,
+        "median": 0.41666666666666663,
+        "min": 0.41666666666666663,
+        "max": 0.41666666666666663
+      },
+      "runtime_seconds": {
+        "mean": 0.02381400182687988,
+        "std": 0.003665659683345339,
+        "median": 0.022330961481202394,
+        "min": 0.019710705033503473,
+        "max": 0.033141040010377765
+      },
+      "full_coverage_rate": 1.0,
+      "best_selected_full_coverage": 7
+    }
+  },
+  "cases": {
+    "Lang-1b-ga": {
+      "runs": 30,
+      "cases": 1,
+      "coverage": {
+        "mean": 1.0,
+        "std": 0.0,
+        "median": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "selected_count": {
+        "mean": 7.0,
+        "std": 0.0,
+        "median": 7.0,
+        "min": 7.0,
+        "max": 7.0
+      },
+      "reduction_ratio": {
+        "mean": 0.41666666666666663,
+        "std": 0.0,
+        "median": 0.41666666666666663,
+        "min": 0.41666666666666663,
+        "max": 0.41666666666666663
+      },
+      "runtime_seconds": {
+        "mean": 0.0954984251370964,
+        "std": 0.00711896400087816,
+        "median": 0.09449807697092183,
+        "min": 0.0851194309652783,
+        "max": 0.11946022603660822
+      },
+      "full_coverage_rate": 1.0,
+      "best_selected_full_coverage": 7
+    },
+    "Lang-1b-greedy": {
+      "runs": 1,
+      "cases": 1,
+      "coverage": {
+        "mean": 1.0,
+        "std": 0.0,
+        "median": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "selected_count": {
+        "mean": 7.0,
+        "std": 0.0,
+        "median": 7.0,
+        "min": 7.0,
+        "max": 7.0
+      },
+      "reduction_ratio": {
+        "mean": 0.41666666666666663,
+        "std": 0.0,
+        "median": 0.41666666666666663,
+        "min": 0.41666666666666663,
+        "max": 0.41666666666666663
+      },
+      "runtime_seconds": {
+        "mean": 0.00024893699446693063,
+        "std": 0.0,
+        "median": 0.00024893699446693063,
+        "min": 0.00024893699446693063,
+        "max": 0.00024893699446693063
+      },
+      "full_coverage_rate": 1.0,
+      "best_selected_full_coverage": 7
+    },
+    "Lang-1b-qiea": {
+      "runs": 30,
+      "cases": 1,
+      "coverage": {
+        "mean": 1.0,
+        "std": 0.0,
+        "median": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "selected_count": {
+        "mean": 7.0,
+        "std": 0.0,
+        "median": 7.0,
+        "min": 7.0,
+        "max": 7.0
+      },
+      "reduction_ratio": {
+        "mean": 0.41666666666666663,
+        "std": 0.0,
+        "median": 0.41666666666666663,
+        "min": 0.41666666666666663,
+        "max": 0.41666666666666663
+      },
+      "runtime_seconds": {
+        "mean": 0.0946301720958824,
+        "std": 0.010474174314807726,
+        "median": 0.09306299249874428,
+        "min": 0.0794832200044766,
+        "max": 0.12525412399554625
+      },
+      "full_coverage_rate": 1.0,
+      "best_selected_full_coverage": 7
+    },
+    "Lang-1b-random": {
+      "runs": 30,
+      "cases": 1,
+      "coverage": {
+        "mean": 1.0,
+        "std": 0.0,
+        "median": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "selected_count": {
+        "mean": 7.366666666666666,
+        "std": 0.4818944098266987,
+        "median": 7.0,
+        "min": 7.0,
+        "max": 8.0
+      },
+      "reduction_ratio": {
+        "mean": 0.3861111111111111,
+        "std": 0.04015786748555819,
+        "median": 0.41666666666666663,
+        "min": 0.33333333333333337,
+        "max": 0.41666666666666663
+      },
+      "runtime_seconds": {
+        "mean": 0.041624443772404145,
+        "std": 0.004993984505775356,
+        "median": 0.04203345751739107,
+        "min": 0.03273159998934716,
+        "max": 0.05407541897147894
+      },
+      "full_coverage_rate": 1.0,
+      "best_selected_full_coverage": 7
+    },
+    "Lang-1b-sa": {
+      "runs": 30,
+      "cases": 1,
+      "coverage": {
+        "mean": 1.0,
+        "std": 0.0,
+        "median": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "selected_count": {
+        "mean": 7.0,
+        "std": 0.0,
+        "median": 7.0,
+        "min": 7.0,
+        "max": 7.0
+      },
+      "reduction_ratio": {
+        "mean": 0.41666666666666663,
+        "std": 0.0,
+        "median": 0.41666666666666663,
+        "min": 0.41666666666666663,
+        "max": 0.41666666666666663
+      },
+      "runtime_seconds": {
+        "mean": 0.02381400182687988,
+        "std": 0.003665659683345339,
+        "median": 0.022330961481202394,
+        "min": 0.019710705033503473,
+        "max": 0.033141040010377765
+      },
+      "full_coverage_rate": 1.0,
+      "best_selected_full_coverage": 7
+    }
+  }
+}

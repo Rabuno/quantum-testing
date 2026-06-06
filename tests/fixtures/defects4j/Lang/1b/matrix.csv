@@ -1,0 +1,5 @@
+test_id,Foo.java:1,Foo.java:2,Foo.java:3,Foo.java:4
+LangTest::testA,1,1,0,0
+LangTest::testB,0,1,1,0
+LangTest::testC,0,0,1,1
+LangTest::testD,1,0,0,1
