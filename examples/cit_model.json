@@ -1,0 +1,13 @@
+{
+  "strength": 2,
+  "parameters": {
+    "browser": ["chrome", "firefox", "safari"],
+    "os": ["linux", "windows", "mac"],
+    "auth": ["password", "oauth"],
+    "role": ["user", "admin"]
+  },
+  "forbidden": [
+    {"browser": "safari", "os": "linux"},
+    {"auth": "oauth", "role": "admin"}
+  ]
+}

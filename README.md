@@ -1,82 +1,100 @@
-# 🧪 Quantum-inspired Testing
+# Quantum Testing
 
-Quantum-inspired Evolutionary Algorithm (QIEA) applied to software testing optimization.
+Research-grade Python toolkit for **quantum-inspired software testing optimization**. The project started as a QIEA demo and now targets a stronger research direction: combining quantum-inspired evolutionary search with practical software-testing tasks such as test-suite minimization and constrained combinatorial interaction testing (CIT).
 
-## Overview
+## Why this is interesting
 
-This project demonstrates how **quantum computing concepts** (superposition, quantum rotation gates, observation/collapse) can be used to build evolutionary algorithms that outperform classical approaches for software testing problems like:
+Recent work explores QAOA and quantum annealing for test-case optimization and regression test-suite optimization. A visible gap remains for a lightweight, reproducible, Python-first toolkit focused on:
 
-- **Test Suite Minimization** — Select minimum tests to maximize requirement coverage
-- **Test Case Generation** — Optimize input combinations for maximum fault detection
-- **OneMax Benchmark** — Comparison baseline
+- binary QIEA for coverage-aware test-suite minimization;
+- constrained t-way combinatorial interaction testing;
+- reproducible baselines: greedy, random search, GA, QIEA;
+- paper-ready metrics and benchmark commands.
 
-## How QIEA Works
+This repo intentionally avoids heavyweight quantum SDKs in the first milestone. The goal is a defensible classical simulation baseline before adding QAOA/annealing backends.
 
-| Classical GA | QIEA |
-|---|---|
-| Binary string `0/1` | Qubit `α\|0⟩ + β\|1⟩` |
-| Mutation (flip bit) | Quantum rotation gate |
-| Crossover | Observation (collapse to binary) |
-| Fixed throughout evolution | Adaptive via superposition |
+## Install
 
-The key advantage: qubits in **superposition** explore the search space more efficiently before collapsing to classical solutions.
-
-## Demos
-
-### Demo 1: OneMax
-Maximize the number of 1-bits in a binary string.
 ```bash
+pip install -e .
+pip install -e '.[dev]'  # for pytest
+```
+
+Runtime dependency: NumPy.
+
+## CLI examples
+
+```bash
+python -m quantum_testing.cli demo
+python -m quantum_testing.cli minimize --matrix examples/coverage_matrix.csv --algorithm qiea
+python -m quantum_testing.cli minimize --matrix examples/coverage_matrix.csv --algorithm greedy
+python -m quantum_testing.cli cit --model examples/cit_model.json --algorithm greedy --rows 12
+python -m quantum_testing.cli cit --model examples/cit_model.json --algorithm qiea --rows 8
+python -m quantum_testing.cli benchmark --tests 30 --requirements 20 --seed 42
+```
+
+The installed console script is also available as `quantum-testing`.
+
+## Architecture
+
+```text
+src/quantum_testing/
+├── algorithms/
+│   ├── qiea.py          # Binary QIEA with seeded RNG, normalization, full-population diversity
+│   └── baselines.py     # Random search, greedy set cover, simple GA
+├── problems/
+│   ├── coverage.py      # Coverage matrix minimization
+│   └── combinatorial.py # Constrained t-way CIT + greedy/QIEA generation
+├── metrics.py           # Coverage, reduction, APFD
+└── cli.py               # demo/minimize/cit/benchmark commands
+```
+
+`qiea_demo.py` remains as a backward-compatible wrapper.
+
+## Research contribution direction
+
+A plausible paper angle:
+
+> **Hybrid Quantum-Inspired Evolutionary Optimization for Cost-Aware Test-Suite Minimization and Constrained Combinatorial Interaction Testing**
+
+Potential differentiators versus existing papers/tools:
+
+1. Unifies test-suite minimization and constrained CIT under one optimization abstraction.
+2. Adds a hybrid QIEA + greedy repair strategy for covering-array generation.
+3. Provides reproducible baselines and metrics rather than a standalone toy demo.
+4. Keeps the method hardware-independent while leaving room for QUBO/QAOA/annealing backends.
+
+## Current algorithms
+
+- QIEA: binary quantum-inspired evolutionary algorithm.
+- Greedy set cover: strong deterministic baseline for coverage minimization.
+- Simple GA: classical evolutionary baseline.
+- Random search: sanity baseline.
+- Greedy CIT generator.
+- Hybrid QIEA CIT generator with greedy repair.
+
+## Verification
+
+```bash
+python -m pytest -q
+python -m quantum_testing.cli benchmark --tests 12 --requirements 8 --seed 42
 python qiea_demo.py
-# QIEA result: 20/20 bits optimal
 ```
 
-### Demo 2: Test Suite Optimization (Maximum Coverage)
-20 test cases, 15 requirements → find minimum tests to cover all requirements.
-```
-Selected tests: [10, 11, 14]
-Tests count: 3/20
-Requirements covered: 15/15 = 100%
-```
+## References / related work
 
-### Demo 3: QIEA vs Classical GA
-Head-to-head comparison on OneMax (30 bits, 200 generations, 3 runs each).
-
-## Requirements
-
-- Python 3.8+
-- NumPy
-
-```bash
-pip install numpy
-```
-
-## Usage
-
-```bash
-python qiea_demo.py
-```
-
-## Project Structure
-
-```
-quantum-testing/
-├── qiea_demo.py    # QIEA implementation + 3 demos
-└── README.md
-```
+- Wang, Ali, Yue, Arcaini. *Quantum Approximate Optimization Algorithm for Test Case Optimization*. arXiv: https://arxiv.org/abs/2312.15547
+- Trovato et al. *Reformulating Regression Test Suite Optimization using Quantum Annealing*. arXiv: https://arxiv.org/abs/2411.15963
+- Trovato, Beseda, Di Nucci. *A Preliminary Investigation on the Usage of Quantum Approximate Optimization Algorithms for Test Case Selection*. arXiv: https://arxiv.org/abs/2504.18955
+- Araujo et al. *Using quantum annealing to generate test cases for cyber-physical systems*. arXiv: https://arxiv.org/abs/2504.21684
+- NIST combinatorial testing tools: https://github.com/usnistgov/combinatorial-testing-tools
+- covertable constrained covering-array generator: https://github.com/walkframe/covertable
+- FAST/FAST-R academic artifacts for test prioritization/reduction: https://github.com/icse18-FAST/FAST and https://github.com/ICSE19-FAST-R/FAST-R
 
 ## Roadmap
 
-- [ ] Qiskit/PennyLane integration for real quantum circuits
-- [ ] QAOA for test suite minimization
-- [ ] Multi-objective optimization benchmarks
-- [ ] Web visualization of qubit convergence
-
-## References
-
-- Quantum-inspired Evolutionary Algorithm (QIEA) — research papers
-- Maximum Coverage Problem — NP-hard optimization
-- Genetic Algorithms vs Quantum-inspired approaches
-
-## License
-
-MIT
+- Add QUBO formulation for coverage minimization.
+- Add multi-objective Pareto reporting for coverage, cost, runtime, and fault history.
+- Add pytest/coverage.py integration for real Python projects.
+- Add benchmark datasets and statistical analysis scripts.
+- Add optional Qiskit/PennyLane/D-Wave backends only after classical baselines are stable.
