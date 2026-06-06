@@ -232,3 +232,56 @@ class SimpleGA:
             print(f"Done! Best fitness: {best_fit:.4f}")
 
         return best_sol, best_fit, history
+
+
+class SimulatedAnnealing:
+    """Binary simulated annealing baseline for QUBO-style minimization.
+
+    The optimizer minimizes an energy function. It is useful as a classical
+    counterpart to QUBO/QAOA/quantum-annealing formulations without requiring
+    quantum SDKs or hardware.
+    """
+
+    def __init__(
+        self,
+        n_bits: int,
+        energy_fn: Callable[[List[int]], float],
+        max_steps: int = 2000,
+        start_temp: float = 2.0,
+        end_temp: float = 0.01,
+        seed: Optional[int] = None,
+    ):
+        self.n_bits = n_bits
+        self.energy_fn = energy_fn
+        self.max_steps = max_steps
+        self.start_temp = start_temp
+        self.end_temp = end_temp
+        self.seed = seed
+        self._rng = np.random.default_rng(seed)
+
+    def run(self, verbose: bool = True) -> Tuple[List[int], float, List[float]]:
+        current = [int(self._rng.random() < 0.5) for _ in range(self.n_bits)]
+        current_energy = self.energy_fn(current)
+        best = current.copy()
+        best_energy = current_energy
+        history: List[float] = []
+
+        for step in range(self.max_steps):
+            frac = step / max(1, self.max_steps - 1)
+            temp = self.start_temp * ((self.end_temp / self.start_temp) ** frac)
+            candidate = current.copy()
+            bit = int(self._rng.integers(0, self.n_bits))
+            candidate[bit] = 1 - candidate[bit]
+            candidate_energy = self.energy_fn(candidate)
+            delta = candidate_energy - current_energy
+            if delta <= 0 or self._rng.random() < math.exp(-delta / max(temp, 1e-12)):
+                current = candidate
+                current_energy = candidate_energy
+                if current_energy < best_energy:
+                    best = current.copy()
+                    best_energy = current_energy
+            history.append(best_energy)
+            if verbose and step % max(1, self.max_steps // 10) == 0:
+                print(f"Step {step:5d} | Best energy: {best_energy:.4f} | Temp: {temp:.4f}")
+
+        return best, best_energy, history

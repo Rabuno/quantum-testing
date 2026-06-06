@@ -4,8 +4,9 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from statistics import mean, pstdev
 
-from quantum_testing.algorithms import GreedySetCover, QIEA, RandomSearch, SimpleGA
+from quantum_testing.algorithms import GreedySetCover, QIEA, RandomSearch, SimpleGA, SimulatedAnnealing
 from quantum_testing.problems.coverage import CoverageProblem
 from quantum_testing.problems.combinatorial import CITModel, greedy_covering_array, qiea_covering_array
 
@@ -22,28 +23,47 @@ def _solve_coverage(problem: CoverageProblem, algorithm: str, seed: int, include
     if algorithm == "qiea":
         sol, _, hist = QIEA(problem.n_tests, pop_size=24, max_gen=160, evaluate_fn=problem.fitness, seed=seed).run(verbose=False)
         rep = problem.report(sol).to_dict()
+        rep["final_fitness"] = hist[-1] if hist else rep["fitness"]
         if include_history:
             rep["history"] = hist
-        else:
-            rep["final_fitness"] = hist[-1] if hist else rep["fitness"]
         return rep
     if algorithm == "ga":
         sol, _, hist = SimpleGA(problem.n_tests, pop_size=24, max_gen=160, evaluate_fn=problem.fitness, seed=seed).run(verbose=False)
         rep = problem.report(sol).to_dict()
+        rep["final_fitness"] = hist[-1] if hist else rep["fitness"]
         if include_history:
             rep["history"] = hist
-        else:
-            rep["final_fitness"] = hist[-1] if hist else rep["fitness"]
         return rep
     if algorithm == "random":
-        sol, _, hist = RandomSearch(problem.n_tests, max_evals=24*160, evaluate_fn=problem.fitness, seed=seed).run(verbose=False)
+        sol, _, hist = RandomSearch(problem.n_tests, max_evals=24 * 160, evaluate_fn=problem.fitness, seed=seed).run(verbose=False)
         rep = problem.report(sol).to_dict()
+        rep["final_fitness"] = hist[-1] if hist else rep["fitness"]
         if include_history:
             rep["history"] = hist
-        else:
-            rep["final_fitness"] = hist[-1] if hist else rep["fitness"]
+        return rep
+    if algorithm == "sa":
+        sol, energy, hist = SimulatedAnnealing(problem.n_tests, energy_fn=problem.qubo_energy, max_steps=3000, seed=seed).run(verbose=False)
+        rep = problem.report(sol).to_dict()
+        rep["qubo_energy"] = energy
+        if include_history:
+            rep["energy_history"] = hist
         return rep
     raise ValueError(f"unknown algorithm: {algorithm}")
+
+
+def _summarize_runs(runs: list[dict]) -> dict:
+    def vals(key: str) -> list[float]:
+        return [float(r[key]) for r in runs]
+    return {
+        "runs": len(runs),
+        "coverage_mean": mean(vals("coverage_ratio")),
+        "coverage_std": pstdev(vals("coverage_ratio")) if len(runs) > 1 else 0.0,
+        "selected_mean": mean(vals("selected_count")),
+        "selected_std": pstdev(vals("selected_count")) if len(runs) > 1 else 0.0,
+        "reduction_mean": mean(vals("reduction_ratio")),
+        "full_coverage_rate": sum(1 for r in runs if r["coverage_ratio"] >= 1.0) / len(runs),
+        "best_selected_full_coverage": min((r["selected_count"] for r in runs if r["coverage_ratio"] >= 1.0), default=None),
+    }
 
 
 def cmd_demo(args):
@@ -56,7 +76,7 @@ def cmd_demo(args):
 
 def cmd_minimize(args):
     problem = CoverageProblem.load_csv(args.matrix) if args.matrix else CoverageProblem.synthetic(seed=args.seed)
-    print(json.dumps(_solve_coverage(problem, args.algorithm, args.seed), indent=2))
+    print(json.dumps(_solve_coverage(problem, args.algorithm, args.seed, include_history=args.history), indent=2))
 
 
 def _constraint_from_model(data):
@@ -77,22 +97,36 @@ def cmd_cit(args):
         rows, report = greedy_covering_array(model, max_rows=args.rows, seed=args.seed)
     else:
         rows, report = qiea_covering_array(model, n_rows=args.rows, seed=args.seed)
+    if not args.history and "history" in report:
+        report = {k: v for k, v in report.items() if k != "history"}
     print(json.dumps({"rows": rows, "report": report}, indent=2))
 
 
 def cmd_benchmark(args):
-    problem = CoverageProblem.synthetic(args.tests, args.requirements, seed=args.seed)
-    results = {alg: _solve_coverage(problem, alg, args.seed) for alg in ["greedy", "qiea", "ga", "random"]}
-    print(json.dumps({"dataset": {"tests": args.tests, "requirements": args.requirements, "seed": args.seed}, "results": results}, indent=2))
+    algorithms = args.algorithms.split(",")
+    by_alg = {alg: [] for alg in algorithms}
+    for offset in range(args.runs):
+        seed = args.seed + offset
+        problem = CoverageProblem.synthetic(args.tests, args.requirements, seed=seed)
+        for alg in algorithms:
+            by_alg[alg].append(_solve_coverage(problem, alg, seed))
+    payload = {
+        "dataset": {"tests": args.tests, "requirements": args.requirements, "seed": args.seed, "runs": args.runs},
+        "algorithms": algorithms,
+        "summary": {alg: _summarize_runs(runs) for alg, runs in by_alg.items()},
+    }
+    if args.raw:
+        payload["runs"] = by_alg
+    print(json.dumps(payload, indent=2))
 
 
 def build_parser():
     p = argparse.ArgumentParser(prog="quantum-testing")
     sub = p.add_subparsers(required=True)
     d = sub.add_parser("demo"); d.add_argument("--seed", type=int, default=42); d.set_defaults(func=cmd_demo)
-    m = sub.add_parser("minimize"); m.add_argument("--matrix"); m.add_argument("--algorithm", choices=["qiea","greedy","ga","random"], default="qiea"); m.add_argument("--seed", type=int, default=42); m.set_defaults(func=cmd_minimize)
-    c = sub.add_parser("cit"); c.add_argument("--model", required=True); c.add_argument("--algorithm", choices=["greedy","qiea"], default="greedy"); c.add_argument("--strength", type=int); c.add_argument("--rows", type=int, default=8); c.add_argument("--seed", type=int, default=42); c.set_defaults(func=cmd_cit)
-    b = sub.add_parser("benchmark"); b.add_argument("--tests", type=int, default=30); b.add_argument("--requirements", type=int, default=20); b.add_argument("--seed", type=int, default=42); b.set_defaults(func=cmd_benchmark)
+    m = sub.add_parser("minimize"); m.add_argument("--matrix"); m.add_argument("--algorithm", choices=["qiea", "greedy", "ga", "random", "sa"], default="qiea"); m.add_argument("--seed", type=int, default=42); m.add_argument("--history", action="store_true"); m.set_defaults(func=cmd_minimize)
+    c = sub.add_parser("cit"); c.add_argument("--model", required=True); c.add_argument("--algorithm", choices=["greedy", "qiea"], default="greedy"); c.add_argument("--strength", type=int); c.add_argument("--rows", type=int, default=8); c.add_argument("--seed", type=int, default=42); c.add_argument("--history", action="store_true"); c.set_defaults(func=cmd_cit)
+    b = sub.add_parser("benchmark"); b.add_argument("--tests", type=int, default=30); b.add_argument("--requirements", type=int, default=20); b.add_argument("--seed", type=int, default=42); b.add_argument("--runs", type=int, default=10); b.add_argument("--algorithms", default="greedy,qiea,ga,random,sa"); b.add_argument("--raw", action="store_true"); b.set_defaults(func=cmd_benchmark)
     return p
 
 
