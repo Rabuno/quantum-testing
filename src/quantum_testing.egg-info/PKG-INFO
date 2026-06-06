@@ -1,3 +1,28 @@
+Metadata-Version: 2.4
+Name: quantum-testing
+Version: 0.1.0
+Summary: Quantum-inspired software testing optimization toolkit
+Author-email: Rabuno <rabuno@example.com>
+License: MIT
+Keywords: quantum,optimization,testing,CIT,QIEA
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Scientific/Engineering
+Classifier: Topic :: Scientific/Engineering :: Mathematics
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy>=1.20.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0; extra == "dev"
+Dynamic: license-file
+
 # Quantum Testing
 
 Research-grade Python toolkit for **quantum-inspired software testing optimization**. The project started as a QIEA demo and now targets a stronger research direction: combining quantum-inspired evolutionary search with practical software-testing tasks such as test-suite minimization and constrained combinatorial interaction testing (CIT).

@@ -1,0 +1,2 @@
+[console_scripts]
+quantum-testing = quantum_testing.cli:main
