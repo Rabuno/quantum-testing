@@ -30,8 +30,30 @@ python -m quantum_testing.cli minimize --matrix examples/coverage_matrix.csv --a
 python -m quantum_testing.cli minimize --matrix examples/coverage_matrix.csv --algorithm greedy
 python -m quantum_testing.cli cit --model examples/cit_model.json --algorithm greedy --rows 12
 python -m quantum_testing.cli cit --model examples/cit_model.json --algorithm qiea --rows 8
-python -m quantum_testing.cli benchmark --tests 30 --requirements 20 --seed 42
+python -m quantum_testing.cli benchmark --tests 30 --requirements 20 --seed 42 --runs 10
 ```
+
+The benchmark command reports mean/std over multiple seeds and includes greedy, QIEA, GA, random search, and QUBO-style simulated annealing (`sa`).
+
+### Defects4J benchmark matrices
+
+Real Java benchmark data can be harvested from [Defects4J](https://github.com/rjust/defects4j) into the same coverage-matrix format:
+
+```bash
+quantum-testing defects4j-matrix \
+  --defects4j-home /path/to/defects4j \
+  --project Lang \
+  --bug 1 \
+  --version b \
+  --test-property tests.trigger \
+  --limit-tests 5
+
+quantum-testing minimize \
+  --matrix datasets/defects4j/Lang/1b/matrix.csv \
+  --algorithm qiea
+```
+
+See `docs/defects4j-benchmark.md`. Defects4J harvesting requires Java 11 and an initialized Defects4J checkout; the Python CI only tests adapter parsing and matrix generation.
 
 The installed console script is also available as `quantum-testing`.
 
@@ -69,6 +91,7 @@ Potential differentiators versus existing papers/tools:
 - QIEA: binary quantum-inspired evolutionary algorithm.
 - Greedy set cover: strong deterministic baseline for coverage minimization.
 - Simple GA: classical evolutionary baseline.
+- QUBO-style simulated annealing: classical minimizer for the same set-cover energy family used by quantum annealing/QAOA formulations.
 - Random search: sanity baseline.
 - Greedy CIT generator.
 - Hybrid QIEA CIT generator with greedy repair.

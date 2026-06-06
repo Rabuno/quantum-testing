@@ -95,6 +95,26 @@ class CoverageProblem:
         cost_ratio = sum(self.costs[i] for i in selected) / max_cost
         return cov - self.alpha * cost_ratio
 
+    def qubo_energy(
+        self,
+        solution: Sequence[int],
+        uncovered_weight: float = 2.0,
+        cost_weight: float | None = None,
+    ) -> float:
+        """QUBO-style energy for test-suite minimization.
+
+        Lower is better. The formulation penalizes uncovered requirements
+        strongly and selected-test cost weakly, mirroring quantum annealing / QAOA
+        set-cover encodings while remaining executable without quantum SDKs.
+        """
+        selected = [i for i, bit in enumerate(solution[: self.n_tests]) if int(bit)]
+        covered = self.covered_by(solution)
+        uncovered = self.n_requirements - len(covered)
+        max_cost = sum(self.costs) or 1.0
+        cw = self.alpha if cost_weight is None else cost_weight
+        selected_cost_ratio = sum(self.costs[i] for i in selected) / max_cost
+        return uncovered_weight * uncovered + cw * selected_cost_ratio
+
     def report(self, solution: Sequence[int]) -> CoverageReport:
         selected = [i for i, bit in enumerate(solution[: self.n_tests]) if int(bit)]
         covered = sorted(self.covered_by(solution))
