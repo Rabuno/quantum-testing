@@ -7,6 +7,7 @@ from pathlib import Path
 from statistics import mean, pstdev
 
 from quantum_testing.algorithms import GreedySetCover, QIEA, RandomSearch, SimpleGA, SimulatedAnnealing
+from quantum_testing.benchmarks.defects4j_runner import AlgorithmConfig, discover_defects4j_cases, parse_int_ranges, run_defects4j_benchmark
 from quantum_testing.datasets.defects4j import Defects4JConfig, collect_defects4j_matrix
 from quantum_testing.problems.coverage import CoverageProblem
 from quantum_testing.problems.combinatorial import CITModel, greedy_covering_array, qiea_covering_array
@@ -133,6 +134,7 @@ def cmd_defects4j_matrix(args):
         limit_tests=args.limit_tests,
         reuse_workdir=not args.no_reuse_workdir,
         force_coverage=args.force_coverage,
+        test_filter=args.test_filter,
     )
     result = collect_defects4j_matrix(cfg)
     print(json.dumps(result.__dict__ | {
@@ -141,6 +143,40 @@ def cmd_defects4j_matrix(args):
         "requirements_txt": str(result.requirements_txt),
         "metadata_json": str(result.metadata_json),
     }, indent=2, default=str))
+
+
+def cmd_defects4j_benchmark(args):
+    projects = args.projects.split(",") if args.projects else None
+    bugs = parse_int_ranges(args.bugs)
+    seeds = parse_int_ranges(args.seeds) or [42]
+    algorithms = [a.strip() for a in args.algorithms.split(",") if a.strip()]
+    cases = discover_defects4j_cases(args.matrix_root, projects=projects, bugs=bugs, version=args.version)
+    config = AlgorithmConfig(
+        qiea_pop_size=args.qiea_pop_size,
+        qiea_generations=args.qiea_generations,
+        qiea_rotation_angle=args.qiea_rotation_angle,
+        ga_pop_size=args.ga_pop_size,
+        ga_generations=args.ga_generations,
+        random_evals=args.random_evals,
+        sa_steps=args.sa_steps,
+    )
+    result = run_defects4j_benchmark(
+        cases=cases,
+        algorithms=algorithms,
+        seeds=seeds,
+        output_dir=args.output_dir,
+        run_id=args.run_id,
+        config=config,
+        paper_metrics_path=args.paper_metrics,
+    )
+    print(json.dumps({
+        "run_id": result["run_id"],
+        "cases": len(cases),
+        "records": result["summary"]["total_records"],
+        "summary": result["summary"],
+        "comparison": result["comparison"],
+        "artifacts": result["artifacts"],
+    }, indent=2))
 
 
 def build_parser():
@@ -161,7 +197,26 @@ def build_parser():
     d4j.add_argument("--limit-tests", type=int)
     d4j.add_argument("--no-reuse-workdir", action="store_true")
     d4j.add_argument("--force-coverage", action="store_true")
+    d4j.add_argument("--test-filter", help="Regex applied after optional class-to-method expansion")
     d4j.set_defaults(func=cmd_defects4j_matrix)
+    d4jb = sub.add_parser("defects4j-benchmark", help="Run QIEA and baselines on harvested Defects4J matrices")
+    d4jb.add_argument("--matrix-root", default="datasets/defects4j")
+    d4jb.add_argument("--projects", help="Comma-separated project IDs, e.g. Lang,Chart")
+    d4jb.add_argument("--bugs", help="Bug ids/ranges, e.g. 1,2,5-10")
+    d4jb.add_argument("--version", choices=["b", "f"], default="b")
+    d4jb.add_argument("--algorithms", default="greedy,qiea,ga,random,sa")
+    d4jb.add_argument("--seeds", default="42")
+    d4jb.add_argument("--output-dir", default="artifacts/defects4j-benchmark")
+    d4jb.add_argument("--run-id")
+    d4jb.add_argument("--paper-metrics")
+    d4jb.add_argument("--qiea-pop-size", type=int, default=24)
+    d4jb.add_argument("--qiea-generations", type=int, default=160)
+    d4jb.add_argument("--qiea-rotation-angle", type=float, default=0.01 * 3.141592653589793)
+    d4jb.add_argument("--ga-pop-size", type=int, default=24)
+    d4jb.add_argument("--ga-generations", type=int, default=160)
+    d4jb.add_argument("--random-evals", type=int)
+    d4jb.add_argument("--sa-steps", type=int, default=3000)
+    d4jb.set_defaults(func=cmd_defects4j_benchmark)
     return p
 
 

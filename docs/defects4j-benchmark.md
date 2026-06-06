@@ -72,7 +72,7 @@ quantum-testing minimize \
   --seed 42
 ```
 
-Compare baselines:
+Compare baselines manually:
 
 ```bash
 for alg in greedy qiea ga random sa; do
@@ -82,6 +82,35 @@ for alg in greedy qiea ga random sa; do
     --seed 42
 done
 ```
+
+Run the paper-artifact benchmark runner over harvested matrices:
+
+```bash
+quantum-testing defects4j-benchmark \
+  --matrix-root datasets/defects4j \
+  --projects Lang,Chart,Cli \
+  --bugs 1-10 \
+  --version b \
+  --algorithms greedy,qiea,ga,random,sa \
+  --seeds 1-30 \
+  --output-dir artifacts/defects4j-benchmark \
+  --paper-metrics docs/paper_metrics/example_2604_26674.json
+```
+
+Output layout:
+
+```text
+artifacts/defects4j-benchmark/<run_id>/
+├── config.json
+├── raw_runs.jsonl
+├── raw_runs.csv
+├── summary.json
+├── comparison.json
+├── skipped_cases.json
+└── result.json
+```
+
+The QIEA runner records `simulated_qubits = number_of_tests` internally because the algorithm uses simulated qubit amplitudes `|ψ⟩ = α|0⟩ + β|1⟩`, observation/collapse, and rotation-gate updates rather than ordinary fixed bits.
 
 ## Test scopes
 
@@ -121,6 +150,16 @@ Each matrix includes `metadata.json` with:
 - output paths and created timestamp
 
 ## Paper benchmark plan using Defects4J
+
+Primary comparison paper:
+
+- Adam Krafczyk and Klaus Schmid, *Reproducible Automated Program Repair Is Hard -- Experiences With the Defects4J Dataset*, arXiv:2604.26674v1 / EASE 2026.
+- The paper is not a quantum optimizer; it establishes a stricter Defects4J **APR workability** framing.
+- Its useful baseline for this project is dataset validity: 655/835 Defects4J 2.0 bugs are workable, 180 are non-workable, and 59 additional workable bugs are likely under-specified/trivial-to-game.
+
+Research claim to target:
+
+> On a Krafczyk-Schmid-style workable Defects4J subset, simulated-qubit QIEA can reduce selected tests / validation cost while preserving full line-coverage and fault-trigger retention, outperforming at least one classical or reproduced external baseline on that metric.
 
 Recommended first real experiment:
 

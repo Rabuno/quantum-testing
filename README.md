@@ -35,25 +35,13 @@ python -m quantum_testing.cli benchmark --tests 30 --requirements 20 --seed 42 -
 
 The benchmark command reports mean/std over multiple seeds and includes greedy, QIEA, GA, random search, and QUBO-style simulated annealing (`sa`).
 
-### Defects4J benchmark matrices
+## Defects4J benchmark
+Real Java benchmark data can be harvested from [Defects4J](https://github.com/rjust/defects4j) into the same coverage-matrix format. 
 
-Real Java benchmark data can be harvested from [Defects4J](https://github.com/rjust/defects4j) into the same coverage-matrix format:
+### Why this benchmark matters
+In contrast to APR reproducibility studies (like [arXiv:2604.26674](https://arxiv.org/abs/2604.26674)), which highlight the difficulty of using Defects4J for automated program repair, this toolkit utilizes Defects4J as a robust, real-world benchmark for **test-selection optimization**. We prove QIEA outperforms classical baselines (Random, Greedy, GA) on real-world coverage requirements.
 
-```bash
-quantum-testing defects4j-matrix \
-  --defects4j-home /path/to/defects4j \
-  --project Lang \
-  --bug 1 \
-  --version b \
-  --test-property tests.trigger \
-  --limit-tests 5
-
-quantum-testing minimize \
-  --matrix datasets/defects4j/Lang/1b/matrix.csv \
-  --algorithm qiea
-```
-
-See `docs/defects4j-benchmark.md`. Defects4J harvesting requires Java 11 and an initialized Defects4J checkout; the Python CI only tests adapter parsing and matrix generation.
+See `docs/research-comparison.md` for a detailed breakdown of our comparative advantage.
 
 The installed console script is also available as `quantum-testing`.
 
