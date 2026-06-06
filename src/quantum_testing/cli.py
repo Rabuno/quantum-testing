@@ -7,6 +7,7 @@ from pathlib import Path
 from statistics import mean, pstdev
 
 from quantum_testing.algorithms import GreedySetCover, QIEA, RandomSearch, SimpleGA, SimulatedAnnealing
+from quantum_testing.datasets.defects4j import Defects4JConfig, collect_defects4j_matrix
 from quantum_testing.problems.coverage import CoverageProblem
 from quantum_testing.problems.combinatorial import CITModel, greedy_covering_array, qiea_covering_array
 
@@ -120,6 +121,28 @@ def cmd_benchmark(args):
     print(json.dumps(payload, indent=2))
 
 
+def cmd_defects4j_matrix(args):
+    cfg = Defects4JConfig(
+        defects4j_home=Path(args.defects4j_home),
+        project=args.project,
+        bug_id=args.bug,
+        version=args.version,
+        work_root=Path(args.work_root),
+        output_dir=Path(args.output_dir),
+        test_property=args.test_property,
+        limit_tests=args.limit_tests,
+        reuse_workdir=not args.no_reuse_workdir,
+        force_coverage=args.force_coverage,
+    )
+    result = collect_defects4j_matrix(cfg)
+    print(json.dumps(result.__dict__ | {
+        "matrix_csv": str(result.matrix_csv),
+        "tests_txt": str(result.tests_txt),
+        "requirements_txt": str(result.requirements_txt),
+        "metadata_json": str(result.metadata_json),
+    }, indent=2, default=str))
+
+
 def build_parser():
     p = argparse.ArgumentParser(prog="quantum-testing")
     sub = p.add_subparsers(required=True)
@@ -127,6 +150,18 @@ def build_parser():
     m = sub.add_parser("minimize"); m.add_argument("--matrix"); m.add_argument("--algorithm", choices=["qiea", "greedy", "ga", "random", "sa"], default="qiea"); m.add_argument("--seed", type=int, default=42); m.add_argument("--history", action="store_true"); m.set_defaults(func=cmd_minimize)
     c = sub.add_parser("cit"); c.add_argument("--model", required=True); c.add_argument("--algorithm", choices=["greedy", "qiea"], default="greedy"); c.add_argument("--strength", type=int); c.add_argument("--rows", type=int, default=8); c.add_argument("--seed", type=int, default=42); c.add_argument("--history", action="store_true"); c.set_defaults(func=cmd_cit)
     b = sub.add_parser("benchmark"); b.add_argument("--tests", type=int, default=30); b.add_argument("--requirements", type=int, default=20); b.add_argument("--seed", type=int, default=42); b.add_argument("--runs", type=int, default=10); b.add_argument("--algorithms", default="greedy,qiea,ga,random,sa"); b.add_argument("--raw", action="store_true"); b.set_defaults(func=cmd_benchmark)
+    d4j = sub.add_parser("defects4j-matrix", help="Harvest a Defects4J test x covered-line matrix")
+    d4j.add_argument("--defects4j-home", required=True)
+    d4j.add_argument("--project", required=True)
+    d4j.add_argument("--bug", type=int, required=True)
+    d4j.add_argument("--version", choices=["b", "f"], default="b")
+    d4j.add_argument("--work-root", default="/tmp/quantum-testing-defects4j")
+    d4j.add_argument("--output-dir", default="datasets/defects4j")
+    d4j.add_argument("--test-property", choices=["tests.trigger", "tests.relevant", "tests.all"], default="tests.trigger")
+    d4j.add_argument("--limit-tests", type=int)
+    d4j.add_argument("--no-reuse-workdir", action="store_true")
+    d4j.add_argument("--force-coverage", action="store_true")
+    d4j.set_defaults(func=cmd_defects4j_matrix)
     return p
 
 
