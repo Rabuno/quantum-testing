@@ -9,6 +9,7 @@ from statistics import mean, pstdev
 from quantum_testing.algorithms import GreedySetCover, QIEA, RandomSearch, SimpleGA, SimulatedAnnealing
 from quantum_testing.benchmarks.defects4j_runner import AlgorithmConfig, discover_defects4j_cases, parse_int_ranges, run_defects4j_benchmark
 from quantum_testing.datasets.defects4j import Defects4JConfig, collect_defects4j_matrix
+from quantum_testing.multiobjective import objective_vector, pareto_front
 from quantum_testing.problems.coverage import CoverageProblem
 from quantum_testing.problems.combinatorial import CITModel, greedy_covering_array, qiea_covering_array
 
@@ -145,6 +146,84 @@ def cmd_defects4j_matrix(args):
     }, indent=2, default=str))
 
 
+def cmd_pareto(args):
+    """Sample candidate suites and print the nondominated Pareto frontier.
+
+    Objectives (mixed maximize/minimize) are derived from
+    :meth:`CoverageProblem.objectives` and filtered with
+    :func:`quantum_testing.multiobjective.pareto_front`.
+    """
+    seed_ranges = parse_int_ranges(args.seeds) if args.seeds else [args.seed]
+    algorithms = [a.strip() for a in args.algorithms.split(",") if a.strip()]
+    candidates: list[dict] = []
+    for seed in seed_ranges:
+        problem = CoverageProblem.synthetic(
+            args.tests, args.requirements, seed=seed
+        )
+        for alg in algorithms:
+            rep = _solve_coverage(problem, alg, seed)
+            obj = problem.objectives(
+                [1 if i in rep.get("selected_tests", []) else 0 for i in range(problem.n_tests)]
+            )
+            candidates.append(
+                {
+                    "seed": seed,
+                    "algorithm": alg,
+                    "selected_tests": rep.get("selected_tests", []),
+                    **obj,
+                }
+            )
+
+    # Canonical objective vector ordering:
+    #   coverage_ratio(max), reduction_ratio(max), selected_count(min),
+    #   total_cost(min), uncovered_count(min), fitness(max)
+    maximize = [True, True, False, False, False, True]
+    nd = pareto_front(candidates, key=objective_vector, maximize=maximize)
+
+    print(
+        json.dumps(
+            {
+                "objectives": {
+                    "names": [
+                        "coverage_ratio",
+                        "reduction_ratio",
+                        "selected_count",
+                        "total_cost",
+                        "uncovered_count",
+                        "fitness",
+                    ],
+                    "maximize": maximize,
+                },
+                "candidates_sampled": len(candidates),
+                "nondominated_count": len(nd),
+                "nondominated": nd,
+            },
+            indent=2,
+        )
+    )
+
+
+def cmd_qubo_export(args):
+    """Export a QUBO-like description of a coverage problem.
+
+    Accepts either a synthetic problem (``--tests`` / ``--requirements``) or
+    a CSV matrix (``--matrix``), and prints the JSON-serializable return of
+    :meth:`CoverageProblem.qubo_terms`.
+    """
+    problem = (
+        CoverageProblem.load_csv(args.matrix)
+        if args.matrix
+        else CoverageProblem.synthetic(
+            args.tests, args.requirements, seed=args.seed
+        )
+    )
+    terms = problem.qubo_terms(
+        uncovered_weight=args.uncovered_weight,
+        cost_weight=args.cost_weight,
+    )
+    print(json.dumps(terms, indent=2))
+
+
 def cmd_defects4j_benchmark(args):
     projects = args.projects.split(",") if args.projects else None
     bugs = parse_int_ranges(args.bugs)
@@ -186,6 +265,21 @@ def build_parser():
     m = sub.add_parser("minimize"); m.add_argument("--matrix"); m.add_argument("--algorithm", choices=["qiea", "greedy", "ga", "random", "sa"], default="qiea"); m.add_argument("--seed", type=int, default=42); m.add_argument("--history", action="store_true"); m.set_defaults(func=cmd_minimize)
     c = sub.add_parser("cit"); c.add_argument("--model", required=True); c.add_argument("--algorithm", choices=["greedy", "qiea"], default="greedy"); c.add_argument("--strength", type=int); c.add_argument("--rows", type=int, default=8); c.add_argument("--seed", type=int, default=42); c.add_argument("--history", action="store_true"); c.set_defaults(func=cmd_cit)
     b = sub.add_parser("benchmark"); b.add_argument("--tests", type=int, default=30); b.add_argument("--requirements", type=int, default=20); b.add_argument("--seed", type=int, default=42); b.add_argument("--runs", type=int, default=10); b.add_argument("--algorithms", default="greedy,qiea,ga,random,sa"); b.add_argument("--raw", action="store_true"); b.set_defaults(func=cmd_benchmark)
+    pareto = sub.add_parser("pareto", help="Sample suites and print nondominated Pareto frontier")
+    pareto.add_argument("--tests", type=int, default=20)
+    pareto.add_argument("--requirements", type=int, default=15)
+    pareto.add_argument("--seed", type=int, default=42)
+    pareto.add_argument("--seeds", help="Seed ranges, e.g. 1-5,7")
+    pareto.add_argument("--algorithms", default="greedy,qiea,ga,random,sa")
+    pareto.set_defaults(func=cmd_pareto)
+    qubo = sub.add_parser("qubo-export", help="Export QUBO-like terms for a coverage problem")
+    qubo.add_argument("--matrix", help="CSV coverage matrix (omit for synthetic)")
+    qubo.add_argument("--tests", type=int, default=12)
+    qubo.add_argument("--requirements", type=int, default=8)
+    qubo.add_argument("--seed", type=int, default=42)
+    qubo.add_argument("--uncovered-weight", type=float, default=2.0)
+    qubo.add_argument("--cost-weight", type=float, default=None)
+    qubo.set_defaults(func=cmd_qubo_export)
     d4j = sub.add_parser("defects4j-matrix", help="Harvest a Defects4J test x covered-line matrix")
     d4j.add_argument("--defects4j-home", required=True)
     d4j.add_argument("--project", required=True)
