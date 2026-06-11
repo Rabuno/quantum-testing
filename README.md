@@ -102,10 +102,58 @@ python qiea_demo.py
 - covertable constrained covering-array generator: https://github.com/walkframe/covertable
 - FAST/FAST-R academic artifacts for test prioritization/reduction: https://github.com/icse18-FAST/FAST and https://github.com/ICSE19-FAST-R/FAST-R
 
+## Research-driven additions
+
+Two recent arXiv preprints motivate the latest additions to this toolkit:
+
+- **Trovato et al.**, *"Reformulating Regression Test Suite Optimization using
+  Quantum Annealing -- an Empirical Study"*, arXiv:2411.15963v2 (2025).
+  Frames regression test selection as quantum annealing and proposes
+  SelectQA, emphasizing QUBO/annealing formulations and empirical comparison
+  against prior quantum approaches on test-suite optimization.
+- **Bandarupalli**, *"The Impact of Software Testing with Quantum Optimization
+  Meets Machine Learning"*, arXiv:2506.02090v1 (2025). Emphasizes hybrid
+  quantum-optimization + ML for test case prioritization in CI/CD, with
+  Defects4J validation, defect detection efficiency, execution-time reduction,
+  and interpretability.
+- The **BQTmizer** / *"Test Case Minimization with Quantum Annealers"*
+  ACM/SSBSE tool line reinforces QUBO exports and minimization with quantum
+  annealers.
+- Multi-objective / **Pareto** optimization is a standard way to avoid
+  collapsing coverage, cost/time, and fault-detection into one opaque scalar
+  too early.
+
+New commands and modules target the gaps those papers highlight:
+
+- `src/quantum_testing/multiobjective.py` -- Pareto dominance, nondominated
+  front filtering, weighted Tchebycheff scalarization, and the canonical
+  6-dimensional objective vector ``(coverage_ratio, reduction_ratio,
+  selected_count, total_cost, uncovered_count, fitness)``.
+- `CoverageProblem.objectives(solution)` -- returns the above vector as a
+  dict; :meth:`CoverageProblem.report` and :meth:`CoverageProblem.fitness`
+  are unchanged.
+- `CoverageProblem.qubo_terms(...)` -- exports a JSON-serializable
+  linear/quadratic QUBO-like description (a compact surrogate penalizing
+  cost and redundant overlap while rewarding coverage) usable by annealing /
+  QAOA tooling.
+- CLI subcommands:
+
+  ```bash
+  python -m quantum_testing.cli pareto --tests 20 --requirements 15 --seeds 1-5
+  python -m quantum_testing.cli qubo-export --tests 12 --requirements 8
+  ```
+
+  `pareto` samples candidate suites across algorithms/seeds and prints only
+  the nondominated coverage/cost/reduction tradeoffs. `qubo-export` prints
+  the QUBO surrogate for either a synthetic problem or a CSV coverage matrix.
+
 ## Roadmap
 
-- Add QUBO formulation for coverage minimization.
-- Add multi-objective Pareto reporting for coverage, cost, runtime, and fault history.
+- Tighten the QUBO surrogate toward an exact set-cover encoding with
+  auxiliary variables for OR constraints (at the cost of larger problems).
+- Add :mod:`quantum_testing.multiobjective` integration into the
+  `benchmark` command so Pareto frontiers are reported alongside mean/std
+  summaries.
 - Add pytest/coverage.py integration for real Python projects.
 - Add benchmark datasets and statistical analysis scripts.
 - Add optional Qiskit/PennyLane/D-Wave backends only after classical baselines are stable.
