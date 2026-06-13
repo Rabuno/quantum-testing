@@ -8,6 +8,8 @@ from statistics import mean, pstdev
 
 from quantum_testing.algorithms import GreedySetCover, QIEA, RandomSearch, SimpleGA, SimulatedAnnealing
 from quantum_testing.benchmarks.defects4j_runner import AlgorithmConfig, discover_defects4j_cases, parse_int_ranges, run_defects4j_benchmark
+from quantum_testing.experiment_runner import ExperimentConfig, format_experiment_report, run_experiment
+from quantum_testing.batch_harvest import BatchHarvestConfig, batch_harvest_defects4j
 from quantum_testing.datasets.defects4j import Defects4JConfig, collect_defects4j_matrix
 from quantum_testing.multiobjective import objective_vector, pareto_front
 from quantum_testing.problems.coverage import CoverageProblem
@@ -224,6 +226,49 @@ def cmd_qubo_export(args):
     print(json.dumps(terms, indent=2))
 
 
+def _parse_bug_ranges_arg(raw: str) -> dict[str, str]:
+    """Parse a CLI bug-ranges string like ``"Lang:1-10,Chart:1-5"`` into a dict."""
+    mapping: dict[str, str] = {}
+    for token in raw.split(","):
+        token = token.strip()
+        if not token:
+            continue
+        if ":" not in token:
+            raise ValueError(f"expected Project:range, got {token!r}")
+        project, range_str = token.split(":", 1)
+        mapping[project.strip()] = range_str.strip()
+    return mapping
+
+
+def cmd_batch_harvest(args):
+    bug_ranges = _parse_bug_ranges_arg(args.bugs)
+    projects = [p.strip() for p in args.projects.split(",") if p.strip()]
+    config = BatchHarvestConfig(
+        defects4j_home=Path(args.defects4j_home),
+        projects=projects,
+        bug_ranges=bug_ranges,
+        version=args.version,
+        work_root=Path(args.work_root),
+        output_dir=Path(args.output_dir),
+        test_property=args.test_property,
+        limit_tests=args.limit_tests,
+        reuse_workdir=not args.no_reuse_workdir,
+        force_coverage=args.force_coverage,
+        test_filter=args.test_filter,
+    )
+    result = batch_harvest_defects4j(config)
+    print()
+    print("=" * 60)
+    print(f"Batch harvest complete: {len(result.results)} OK, {len(result.failures)} FAILED")
+    print(f"Total tests harvested: {result.total_tests_sum}")
+    print(f"Total requirements harvested: {result.total_requirements_sum}")
+    if result.failures:
+        print()
+        print("Failures:")
+        for f in result.failures:
+            print(f"  {f['project']}/{f['bug_id']}: {f['error']}")
+
+
 def cmd_defects4j_benchmark(args):
     projects = args.projects.split(",") if args.projects else None
     bugs = parse_int_ranges(args.bugs)
@@ -258,6 +303,49 @@ def cmd_defects4j_benchmark(args):
     }, indent=2))
 
 
+def cmd_experiment(args):
+    """Run a full multi-algorithm, multi-bug experiment with statistical analysis."""
+    projects = [p.strip() for p in args.projects.split(",") if p.strip()]
+    bug_ranges = _parse_bug_ranges_arg(args.bugs)
+    algorithms = [a.strip() for a in args.algorithms.split(",") if a.strip()]
+    seeds = parse_int_ranges(args.seeds) or [42]
+
+    config = ExperimentConfig(
+        matrix_root=Path(args.matrix_root),
+        projects=projects,
+        bug_ranges=bug_ranges,
+        algorithms=algorithms,
+        seeds=seeds,
+        output_dir=Path(args.output_dir),
+        run_id=args.run_id,
+        qaoa_p=args.qaoa_p,
+        qaoa_max_qubits=args.qaoa_max_qubits,
+        nsga3_pop_size=args.nsga3_pop_size,
+        nsga3_generations=args.nsga3_generations,
+    )
+
+    result = run_experiment(config)
+
+    report = format_experiment_report(result)
+    print(report)
+
+    report_format = args.report_format
+    out_dir = Path(result.raw_result.get("artifacts", {}).get("raw_runs_jsonl", "")).parent
+    if report_format in ("text", "both"):
+        text_path = out_dir / "experiment_report.txt"
+        text_path.write_text(report)
+        print(f"\nText report saved to: {text_path}")
+    if report_format in ("json", "both"):
+        json_path = out_dir / "experiment_result.json"
+        payload = {
+            "run_id": result.run_id,
+            "statistical_analysis": result.statistical_analysis,
+            "per_bug_analysis": result.per_bug_analysis,
+        }
+        json_path.write_text(json.dumps(payload, indent=2, default=str))
+        print(f"JSON result saved to: {json_path}")
+
+
 def build_parser():
     p = argparse.ArgumentParser(prog="quantum-testing")
     sub = p.add_subparsers(required=True)
@@ -280,6 +368,19 @@ def build_parser():
     qubo.add_argument("--uncovered-weight", type=float, default=2.0)
     qubo.add_argument("--cost-weight", type=float, default=None)
     qubo.set_defaults(func=cmd_qubo_export)
+    bh = sub.add_parser("defects4j-harvest", help="Batch-harvest Defects4J coverage matrices for multiple projects/bugs")
+    bh.add_argument("--defects4j-home", required=True)
+    bh.add_argument("--projects", required=True, help="Comma-separated project IDs, e.g. Lang,Chart,Cli,Math")
+    bh.add_argument("--bugs", required=True, help="Per-project bug ranges, e.g. Lang:1-10,Chart:1-5,Cli:1-3,Math:1-8")
+    bh.add_argument("--version", choices=["b", "f"], default="b")
+    bh.add_argument("--work-root", default="/tmp/quantum-testing-defects4j")
+    bh.add_argument("--output-dir", default="datasets/defects4j")
+    bh.add_argument("--test-property", choices=["tests.trigger", "tests.relevant", "tests.all"], default="tests.trigger")
+    bh.add_argument("--limit-tests", type=int)
+    bh.add_argument("--no-reuse-workdir", action="store_true")
+    bh.add_argument("--force-coverage", action="store_true")
+    bh.add_argument("--test-filter", help="Regex applied after optional class-to-method expansion")
+    bh.set_defaults(func=cmd_batch_harvest)
     d4j = sub.add_parser("defects4j-matrix", help="Harvest a Defects4J test x covered-line matrix")
     d4j.add_argument("--defects4j-home", required=True)
     d4j.add_argument("--project", required=True)
@@ -311,6 +412,20 @@ def build_parser():
     d4jb.add_argument("--random-evals", type=int)
     d4jb.add_argument("--sa-steps", type=int, default=3000)
     d4jb.set_defaults(func=cmd_defects4j_benchmark)
+    exp = sub.add_parser("experiment", help="Run full multi-algorithm experiment with statistical analysis")
+    exp.add_argument("--matrix-root", default="datasets/defects4j")
+    exp.add_argument("--projects", required=True, help="Comma-separated project IDs, e.g. Lang,Chart,Cli")
+    exp.add_argument("--bugs", required=True, help="Per-project bug ranges, e.g. Lang:1-10,Chart:1-5")
+    exp.add_argument("--algorithms", default="greedy,qiea,enhanced_qiea,ga,random,sa")
+    exp.add_argument("--seeds", default="42,123,456,789,1024")
+    exp.add_argument("--output-dir", default="artifacts/experiment")
+    exp.add_argument("--run-id")
+    exp.add_argument("--qaoa-p", type=int, default=1)
+    exp.add_argument("--qaoa-max-qubits", type=int, default=25)
+    exp.add_argument("--nsga3-pop-size", type=int, default=50)
+    exp.add_argument("--nsga3-generations", type=int, default=100)
+    exp.add_argument("--report-format", choices=["json", "text", "both"], default="both")
+    exp.set_defaults(func=cmd_experiment)
     return p
 
 
