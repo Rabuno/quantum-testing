@@ -1,0 +1,33 @@
+# Quick Harvest Preset — 3 smallest Defects4J bugs for safe local testing.
+#
+# Usage:
+#   uv run python -m quantum_testing.cli quick-harvest --defects4j-home /path/to/defects4j
+#
+# Disk budget:
+#   Work dir  : ~600MB–1.5GB  (deletable after harvest)
+#   Output    : ~600KB–2.2MB  (kept in datasets/defects4j/)
+#   RAM needed: ~2–3 GB
+#   Time      : ~30–60 minutes
+#
+# After harvest, delete the work dir to reclaim disk:
+#   rm -rf /tmp/quantum-testing-defects4j
+
+projects:
+  - Lang
+  - Chart
+
+bug_ranges:
+  Lang: "1-2"
+  Chart: "1-1"
+
+# Only trigger tests (smallest set, fastest coverage collection)
+test_property: tests.trigger
+
+# Work directory — safe to delete entirely after harvest
+work_root: /tmp/quantum-testing-defects4j
+
+# Output directory — kept after harvest
+output_dir: datasets/defects4j
+
+# Reuse workdir on re-runs (skip checkout/compile if already done)
+reuse_workdir: true

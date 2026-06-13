@@ -240,6 +240,56 @@ def _parse_bug_ranges_arg(raw: str) -> dict[str, str]:
     return mapping
 
 
+def cmd_quick_harvest(args):
+    """Harvest a small, safe preset of Defects4J bugs for local testing.
+
+    Uses 3 bugs (Lang/1b, Lang/2b, Chart/1b) — the smallest bugs in Defects4J.
+    Disk: ~600MB-1.5GB work dir (deletable), ~600KB-2.2MB output.
+    RAM: ~2-3 GB. Time: ~30-60 minutes.
+    """
+    projects = ["Lang", "Chart"]
+    bug_ranges: dict[str, str] = {"Lang": "1-2", "Chart": "1-1"}
+    config = BatchHarvestConfig(
+        defects4j_home=Path(args.defects4j_home),
+        projects=projects,
+        bug_ranges=bug_ranges,
+        version="b",
+        work_root=Path("/tmp/quantum-testing-defects4j"),
+        output_dir=Path("datasets/defects4j"),
+        test_property="tests.trigger",
+        reuse_workdir=True,
+        force_coverage=False,
+    )
+    print("=" * 60)
+    print("QUICK HARVEST — 3 smallest Defects4J bugs")
+    print("=" * 60)
+    print(f"  Projects : {', '.join(projects)}")
+    print(f"  Bugs     : Lang/1b, Lang/2b, Chart/1b")
+    print(f"  Work dir : {config.work_root}  (deletable after)")
+    print(f"  Output   : {config.output_dir}")
+    print()
+    result = batch_harvest_defects4j(config)
+    print()
+    print("=" * 60)
+    print(f"Quick harvest complete: {len(result.results)} OK, {len(result.failures)} FAILED")
+    print(f"Total tests harvested: {result.total_tests_sum}")
+    print(f"Total requirements harvested: {result.total_requirements_sum}")
+    if result.failures:
+        print()
+        print("Failures:")
+        for f in result.failures:
+            print(f"  {f['project']}/{f['bug_id']}: {f['error']}")
+    print()
+    print("Next steps:")
+    print("  1. Run experiment:")
+    print("       uv run python -m quantum_testing.cli experiment \\")
+    print("         --projects Lang,Chart --bugs 'Lang:1-2,Chart:1-1' \\")
+    print("         --algorithms greedy,qiea,enhanced_qiea,ga,random,sa \\")
+    print("         --seeds 42,123,456,789,1024")
+    print("  2. Delete work dir when done:")
+    print("       rm -rf /tmp/quantum-testing-defects4j")
+
+
 def cmd_batch_harvest(args):
     bug_ranges = _parse_bug_ranges_arg(args.bugs)
     projects = [p.strip() for p in args.projects.split(",") if p.strip()]
@@ -368,6 +418,9 @@ def build_parser():
     qubo.add_argument("--uncovered-weight", type=float, default=2.0)
     qubo.add_argument("--cost-weight", type=float, default=None)
     qubo.set_defaults(func=cmd_qubo_export)
+    qh = sub.add_parser("quick-harvest", help="Harvest 3 smallest Defects4J bugs (Lang/1b, Lang/2b, Chart/1b) — safe for local testing")
+    qh.add_argument("--defects4j-home", required=True, help="Path to local Defects4J installation")
+    qh.set_defaults(func=cmd_quick_harvest)
     bh = sub.add_parser("defects4j-harvest", help="Batch-harvest Defects4J coverage matrices for multiple projects/bugs")
     bh.add_argument("--defects4j-home", required=True)
     bh.add_argument("--projects", required=True, help="Comma-separated project IDs, e.g. Lang,Chart,Cli,Math")

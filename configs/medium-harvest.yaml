@@ -1,0 +1,31 @@
+# Medium Harvest Preset — 10 bugs for stronger statistical analysis.
+#
+# Usage:
+#   uv run python -m quantum_testing.cli batch-harvest \
+#     --defects4j-home /path/to/defects4j \
+#     --projects Lang,Chart,Math \
+#     --bugs "Lang:1-5,Chart:1-3,Math:1-2"
+#
+# Disk budget:
+#   Work dir  : ~2–5 GB   (deletable after harvest)
+#   Output    : ~2–8 MB   (kept in datasets/defects4j/)
+#   RAM needed: ~3–4 GB
+#   Time      : ~1.5–3 hours
+#
+# After harvest, delete the work dir to reclaim disk:
+#   rm -rf /tmp/quantum-testing-defects4j
+
+projects:
+  - Lang
+  - Chart
+  - Math
+
+bug_ranges:
+  Lang: "1-5"
+  Chart: "1-3"
+  Math: "1-2"
+
+test_property: tests.trigger
+work_root: /tmp/quantum-testing-defects4j
+output_dir: datasets/defects4j
+reuse_workdir: true
