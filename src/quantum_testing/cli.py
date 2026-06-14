@@ -14,6 +14,17 @@ from quantum_testing.datasets.defects4j import Defects4JConfig, collect_defects4
 from quantum_testing.multiobjective import objective_vector, pareto_front
 from quantum_testing.problems.coverage import CoverageProblem
 from quantum_testing.problems.combinatorial import CITModel, greedy_covering_array, qiea_covering_array
+from quantum_testing.visualization import (
+    generate_all_figures,
+    plot_box_coverage,
+    plot_box_reduction,
+    plot_cd_diagram,
+    plot_convergence,
+    plot_heatmap,
+    plot_pareto_front,
+    plot_runtime_comparison,
+    plot_statistical_summary,
+)
 
 
 def onemax(bits):
@@ -290,6 +301,144 @@ def cmd_quick_harvest(args):
     print("       rm -rf /tmp/quantum-testing-defects4j")
 
 
+def cmd_plot(args):
+    """Generate publication-ready figures from an experiment directory.
+
+    Reads experiment artifacts (statistical analysis, benchmark results) and
+    produces a complete figure set for the paper.
+    """
+    exp_dir = Path(args.experiment_dir)
+    out_dir = args.output_dir or str(exp_dir / "figures")
+
+    if not exp_dir.exists():
+        print(f"Error: experiment directory not found: {exp_dir}")
+        return
+
+    # Map figure name → function
+    FIGURE_MAP = {
+        "cd": _plot_cd_from_dir,
+        "box_coverage": _plot_box_coverage_from_dir,
+        "box_reduction": _plot_box_reduction_from_dir,
+        "runtime": _plot_runtime_from_dir,
+        "convergence": _plot_convergence_from_dir,
+        "stat_summary": _plot_stat_summary_from_dir,
+        "heatmap": _plot_heatmap_from_args,
+        "all": _plot_all_from_dir,
+    }
+
+    fig_type = args.type
+    if fig_type not in FIGURE_MAP:
+        print(f"Unknown figure type: {fig_type}. Choose from: {', '.join(FIGURE_MAP)}")
+        return
+
+    FIGURE_MAP[fig_type](exp_dir, out_dir, args)
+
+
+def _plot_cd_from_dir(exp_dir, out_dir, args):
+    per_bug_path = exp_dir / "per_bug_analysis.json"
+    if not per_bug_path.exists():
+        print("per_bug_analysis.json not found in experiment directory")
+        return
+    per_bug = json.loads(per_bug_path.read_text())
+    cd_data: dict[str, list[float]] = {}
+    for bug_key, bug_data in per_bug.items():
+        for alg, scores in bug_data.items():
+            if isinstance(scores, dict) and "coverage_mean" in scores:
+                cd_data.setdefault(alg, []).append(scores["coverage_mean"])
+    if not cd_data:
+        print("No coverage data found for CD diagram")
+        return
+    path = plot_cd_diagram(cd_data, outfile=Path(out_dir) / "cd_diagram.png")
+    print(f"CD diagram saved to: {path}")
+
+
+def _load_summary(exp_dir):
+    for candidate in ["benchmark/summary.json", "summary.json"]:
+        p = exp_dir / candidate
+        if p.exists():
+            return json.loads(p.read_text())
+    return None
+
+
+def _plot_box_coverage_from_dir(exp_dir, out_dir, args):
+    summary = _load_summary(exp_dir)
+    if not summary:
+        print("summary.json not found in experiment directory")
+        return
+    path = plot_box_coverage(summary, Path(out_dir) / "box_coverage.png")
+    print(f"Box plot (coverage) saved to: {path}")
+
+
+def _plot_box_reduction_from_dir(exp_dir, out_dir, args):
+    summary = _load_summary(exp_dir)
+    if not summary:
+        print("summary.json not found in experiment directory")
+        return
+    path = plot_box_reduction(summary, Path(out_dir) / "box_reduction.png")
+    print(f"Box plot (reduction) saved to: {path}")
+
+
+def _plot_runtime_from_dir(exp_dir, out_dir, args):
+    summary = _load_summary(exp_dir)
+    if not summary:
+        print("summary.json not found in experiment directory")
+        return
+    path = plot_runtime_comparison(summary, Path(out_dir) / "runtime.png")
+    print(f"Runtime comparison saved to: {path}")
+
+
+def _plot_convergence_from_dir(exp_dir, out_dir, args):
+    for candidate in ["benchmark/raw_runs.jsonl", "raw_runs.jsonl"]:
+        p = exp_dir / candidate
+        if p.exists():
+            raw_path = p
+            break
+    else:
+        print("raw_runs.jsonl not found in experiment directory")
+        return
+    histories: dict[str, list[list[float]]] = {}
+    with raw_path.open() as f:
+        for line in f:
+            rec = json.loads(line)
+            alg = rec.get("algorithm", "unknown")
+            hist = rec.get("history", rec.get("fitness_history", []))
+            if hist:
+                histories.setdefault(alg, []).append(hist)
+    if not histories:
+        print("No convergence history found in raw runs")
+        return
+    path = plot_convergence(histories, outfile=Path(out_dir) / "convergence.png")
+    print(f"Convergence curves saved to: {path}")
+
+
+def _plot_stat_summary_from_dir(exp_dir, out_dir, args):
+    stat_path = exp_dir / "statistical_analysis.json"
+    if not stat_path.exists():
+        print("statistical_analysis.json not found in experiment directory")
+        return
+    stat = json.loads(stat_path.read_text())
+    path = plot_statistical_summary(stat, Path(out_dir) / "stat_summary.png")
+    print(f"Statistical summary saved to: {path}")
+
+
+def _plot_heatmap_from_args(exp_dir, out_dir, args):
+    if not args.matrix:
+        print("Heatmap requires --matrix path")
+        return
+    path = plot_heatmap(args.matrix, outfile=Path(out_dir) / "heatmap.png")
+    print(f"Heatmap saved to: {path}")
+
+
+def _plot_all_from_dir(exp_dir, out_dir, args):
+    figures = generate_all_figures(exp_dir, out_dir)
+    if figures:
+        print(f"Generated {len(figures)} figures:")
+        for fig_path in figures:
+            print(f"  {fig_path}")
+    else:
+        print("No figures generated — check experiment directory for required artifacts")
+
+
 def cmd_batch_harvest(args):
     bug_ranges = _parse_bug_ranges_arg(args.bugs)
     projects = [p.strip() for p in args.projects.split(",") if p.strip()]
@@ -479,6 +628,18 @@ def build_parser():
     exp.add_argument("--nsga3-generations", type=int, default=100)
     exp.add_argument("--report-format", choices=["json", "text", "both"], default="both")
     exp.set_defaults(func=cmd_experiment)
+    plot = sub.add_parser("plot", help="Generate publication-ready figures from experiment results")
+    plot.add_argument("--experiment-dir", required=True, help="Path to experiment output directory")
+    plot.add_argument("--output-dir", help="Figure output directory (default: <experiment-dir>/figures)")
+    plot.add_argument(
+        "--type",
+        choices=["cd", "box_coverage", "box_reduction", "runtime", "convergence", "stat_summary", "heatmap", "all"],
+        default="all",
+        help="Figure type to generate (default: all)",
+    )
+    plot.add_argument("--matrix", help="Path to coverage matrix CSV (required for heatmap type)")
+    plot.add_argument("--format", choices=["png", "pdf", "svg"], default="png", help="Output format (default: png)")
+    plot.set_defaults(func=cmd_plot)
     return p
 
 
