@@ -92,6 +92,16 @@ python -m quantum_testing.cli benchmark --tests 12 --requirements 8 --seed 42
 python qiea_demo.py
 ```
 
+## Documentation
+
+- **[Contributing Guide](docs/CONTRIBUTING.md)**: Development workflow, testing, code style
+- **[Environment Configuration](docs/ENV.md)**: Python environment, dependencies, system requirements
+- **[Runbook](docs/RUNBOOK.md)**: Experiment execution, troubleshooting, performance tuning
+- **[Defects4J Benchmark](docs/defects4j-benchmark.md)**: Detailed benchmark documentation
+- **[QUBO Clarification](docs/QUBO-CLARIFICATION.md)**: QUBO formulation details
+- **[Research Comparison](docs/research-comparison.md)**: Comparative analysis with related work
+- **[Paper Artifact Plan](docs/paper-artifact-plan.md)**: Publication preparation checklist
+
 ## References / related work
 
 - Wang, Ali, Yue, Arcaini. *Quantum Approximate Optimization Algorithm for Test Case Optimization*. arXiv: https://arxiv.org/abs/2312.15547

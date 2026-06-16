@@ -6,8 +6,30 @@ The single-objective ``fitness`` / ``qubo_energy`` formulation collapses
 coverage, cost, and reduction into one scalar, hiding tradeoffs between
 objectives. The multi-objective helpers in
 :mod:`quantum_testing.multiobjective` and the ``objectives`` / ``qubo_terms``
-methods below make those tradeoffs explicit and export a QUBO-like
-description usable by annealing / QAOA tooling.
+methods below make those tradeoffs explicit.
+
+QUBO Formulations
+-----------------
+This module provides TWO QUBO-like formulations:
+
+1. **Surrogate QUBO (default)** via :meth:`qubo_energy` and :meth:`qubo_terms`
+   - Lightweight, fast for classical comparison
+   - No auxiliary variables (y_j = OR constraints)
+   - Penalizes overlap instead of enforcing OR constraints
+   - Suitable for SA, GA, QIEA, and classical baselines
+   - Energy: H = uncovered_weight * uncovered + cost_weight * selected_cost
+   - Quadratic overlap penalty for redundancy
+
+2. **Exact Set-Cover QUBO** via :mod:`qubo_exact.ExactQUBOFormulation`
+   - Exact mathematical formulation with auxiliary variables
+   - y_j = OR_{i covers j} x_i (enforced via penalty)
+   - Compatible with real quantum hardware (D-Wave, QAOA)
+   - Used for exact comparison and hardware validation
+   - Energy: H = A*Σ(1-y_j)² + B*Σ(cost_i*x_i) + C*Σ(x_i-y_j)²
+
+RECOMMENDATION FOR EXPERIMENTS:
+- Use **surrogate QUBO** for classical algorithm comparison (faster, scalable)
+- Use **exact QUBO** for quantum hardware experiments (if available)
 
 Related work
 ------------
@@ -119,11 +141,33 @@ class CoverageProblem:
         uncovered_weight: float = 2.0,
         cost_weight: float | None = None,
     ) -> float:
-        """QUBO-style energy for test-suite minimization.
+        """Surrogate QUBO energy for test-suite minimization.
 
-        Lower is better. The formulation penalizes uncovered requirements
-        strongly and selected-test cost weakly, mirroring quantum annealing / QAOA
-        set-cover encodings while remaining executable without quantum SDKs.
+        ⚠️ NOTE: This is a **surrogate** formulation, NOT the exact set-cover QUBO.
+
+        This is a lightweight penalty-based formulation used for:
+        - Classical algorithm comparison (SA, local search)
+        - Runtime efficiency (no auxiliary variables)
+        - Early exploration without quantum SDKs
+
+        For exact QUBO formulation (compatible with real quantum hardware):
+        See ExactQUBOFormulation in qubo_exact.py which uses auxiliary variables
+        y_j to encode OR constraints: y_j = OR_{i covers j} x_i.
+
+        Formulation:
+            H = uncovered_weight * uncovered_requirements
+                + cost_weight * (selected_test_cost / max_cost)
+                + overlap_penalty (quadratic term for redundant overlap)
+
+        Lower is better.
+
+        Args:
+            solution: Binary test selection vector
+            uncovered_weight: Penalty weight for uncovered requirements (default: 2.0)
+            cost_weight: Penalty weight for test cost (default: 0.1, from alpha)
+
+        Returns:
+            Energy score - lower is better
         """
         selected = [i for i, bit in enumerate(solution[: self.n_tests]) if int(bit)]
         covered = self.covered_by(solution)
@@ -172,35 +216,41 @@ class CoverageProblem:
         uncovered_weight: float = 2.0,
         cost_weight: float | None = None,
     ) -> Dict[str, object]:
-        """Export a QUBO-like linear/quadratic description of the problem.
+        """Export a surrogate QUBO-like linear/quadratic description.
 
-        The exact set-cover problem requires auxiliary variables to express
-        the OR of each requirement's covering tests. To keep the export
-        compact and usable by annealing / QAOA tooling without introducing
-        auxiliaries, this returns a *surrogate* QUBO that:
+        ⚠️ NOTE: This is a **SURROGATE** formulation, NOT the exact set-cover QUBO.
 
-        - rewards selecting tests that cover many requirements (linear term);
-        - penalizes selecting many tests (linear cost term);
-        - penalizes redundant overlap between selected tests (quadratic term).
+        For exact QUBO with auxiliary variables compatible with real quantum hardware,
+        use ExactQUBOFormulation from qubo_exact.py.
 
-        This is a standard penalty-expansion surrogate used when the true OR
-        constraints would blow up the variable count; see e.g. the QUBO
-        encodings discussed in Trovato et al., arXiv:2411.15963v2 (2025) and
-        the BQTmizer tool line (ACM/SSBSE).
+        This surrogate formulation:
+        - Rewards coverage (linear term for each covered requirement)
+        - Penalizes test cost (linear term)
+        - Penalizes redundant overlap (quadratic penalty)
+
+        When exact set-cover would require auxiliary OR variables (y_j = OR_{i covers j} x_i),
+        this surrogate avoids that blow-up at the cost of not being exactly equivalent to the
+        true set-cover problem. This is appropriate for:
+        - Classical algorithm comparison (SA, local search, metaheuristics)
+        - Runtime efficiency on large problem instances
+        - Rapid prototyping and exploration
+
+        References:
+        - Trovato et al., arXiv:2411.15963v2 (2025) - QUBO encodings in quantum annealing
+        - BQTmizer tool line (ACM/SSBSE) - real-world QUBO applications
+        - Lucas, Frontiers in Physics 2014 - Ising/QUBO formulations
 
         Parameters
         ----------
         uncovered_weight:
-            Weight on the coverage-reward term. Higher values push the
-            solver toward full coverage.
+            Weight on coverage reward (default: 2.0)
         cost_weight:
-            Weight on the per-test cost term. Defaults to ``self.alpha``.
+            Weight on test cost (default: 0.1, from self.alpha)
 
         Returns
         -------
         dict
-            JSON-serializable dict with keys ``linear``, ``quadratic``,
-            ``offset``, ``sense``, ``variables``, and ``metadata``.
+            JSON-serializable QUBO: linear coefficients, quadratic pairs, offset, sense
         """
         cw = self.alpha if cost_weight is None else float(cost_weight)
         max_cost = sum(self.costs) or 1.0
